@@ -1,0 +1,46 @@
+version: '2'
+
+networks:
+  ros:
+    driver: bridge
+
+services:
+  ros-master:
+    container_name: ros-master
+    image: ros:kinetic-ros-core
+    restart: unless-stopped
+    environment:
+      - "ROS_HOSTNAME=ros-master"
+      - "ROS_MASTER_URI=http://ros-master:11311"
+    command: stdbuf -o L roscore
+    ports:
+      - 11311:11311
+    networks:
+      - ros
+    restart: always
+
+  publish:
+    image: ros:kinetic-ros-core
+    depends_on:
+      - ros-master
+    environment:
+      - "ROS_MASTER_URI=http://ros-master:11311"
+      - "ROS_HOSTNAME=publish"
+    volumes:
+      - ./rosbag:/rosbag
+    command:  stdbuf -o L rosbag play /rosbag/2018-12-15-02-11-36.bag
+    networks:
+      - ros
+    restart: always
+
+  display:
+    image: ros:kinetic-ros-core
+    depends_on:
+      - ros-master
+    environment:
+      - "ROS_MASTER_URI=http://ros-master:11311"
+      - "ROS_HOSTNAME=display"
+    command: stdbuf -o L rostopic echo /rosout_agg
+    networks:
+      - ros
+    restart: always
