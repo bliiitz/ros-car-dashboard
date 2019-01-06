@@ -5,10 +5,25 @@ networks:
     driver: bridge
 
 services:
+
+  dashboard:
+    container_name: dashboard
+    restart: always
+    build: dashboard
+    image: ros:dashboard
+    environment:
+      - "ROS_HOSTNAME=ros-master"
+      - "ROS_MASTER_URI=http://ros-master:11311"
+    ports:
+      - 3000:3000
+    networks:
+      - ros
+    depends_on:
+      - ros-master
+
   ros-master:
     container_name: ros-master
     image: ros:kinetic-ros-core
-    restart: unless-stopped
     environment:
       - "ROS_HOSTNAME=ros-master"
       - "ROS_MASTER_URI=http://ros-master:11311"
@@ -41,6 +56,6 @@ services:
       - "ROS_MASTER_URI=http://ros-master:11311"
       - "ROS_HOSTNAME=display"
     command: stdbuf -o L rostopic echo /rosout_agg
+    restart: always
     networks:
       - ros
-    restart: always
