@@ -1,33 +1,50 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const RosWebForwarder = require('./class/ros-web-forwarder.class');
 const http = require('http').Server(app);
-const io = require('socket.io')(http);
 const RosClient = require("roslibjs-client"); 
-
-app.use("/", express.static(path.join(__dirname, 'public')));
 
 /**
  * set environment vars
  */
 const ROS_MASTER_URI = process.env.ROS_MASTER_URI
-let connectedSokets = []
+
+const ROS_FORWARD_RETHINK = (process.env.ROS_FORWARD_RETHINK == "true")
+if(ROS_FORWARD_RETHINK)
+  const RETHINK = {
+    host: process.env.RETHINK_HOST,
+    port: parseInt(process.env.RETHINK_HOST),
+    db:   process.env.RETHINK_DB,
+  }
 
 
-io.on('connection', function( client ){  console.log('Dashboard connected') });
+/**
+ * Main process
+ */
+main()
+async function main() {
+  app.use("/", express.static(path.join(__dirname, 'public')));
+  
+  const client = new RosClient({
+      url: ROS_MASTER_URI
+  });
 
-const client = new RosClient({
-    url: ROS_MASTER_URI
-});
+  const webForwarder = new RosWebForwarder(http)
 
-var listenerVideo = client.topic.subscribe('rosbag', function(message) {
-   console.log('oyupi')
-   io.emit('receivedata', {
-     type: "video",
-     data: message
-   })
-});
+  if(ROS_FORWARD_RETHINK)
+    const rethinkForwarder = new RosRethinkForwarder(RETHINK)
+  
+  client.topic.subscribe('rosbag', async (message) => {
+     console.log('receive video frame data')
+     webForwarder.broadcast('video', message)
 
-http.listen(3000, function(){
-  console.log('listening on *:3000');
-});
+    if(ROS_FORWARD_RETHINK)
+      rethinkForwarder.store('video', message)
+  });
+  
+  http.listen(3000, function(){
+    console.log('listening on *:3000');
+  });
+}
+

@@ -12,10 +12,17 @@ services:
     build: dashboard
     image: ros:dashboard
     environment:
-      - "ROS_HOSTNAME=ros-master"
       - "ROS_MASTER_URI=http://ros-master:11311"
     ports:
       - 3000:3000
+    networks:
+      - ros
+    depends_on:
+      - ros-master
+
+  rethinkdb:
+    image: rethinkdb:2.3.6
+    restart: always
     networks:
       - ros
     depends_on:
